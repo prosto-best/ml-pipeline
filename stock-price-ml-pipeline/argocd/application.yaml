@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stock-predictor
+  namespace: argocd
+  finalizers:
+    # ресурсы удаляются вместе с Application при её удалении
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/your-org/stock-price-ml-pipeline.git
+    targetRevision: main
+    path: helm/stock-predictor
+    helm:
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: stock-predictor
+
+  syncPolicy:
+    automated:
+      prune: true       # удалять ресурсы, убранные из Git
+      selfHeal: true    # откатывать ручные правки в кластере, если Git не менялся
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

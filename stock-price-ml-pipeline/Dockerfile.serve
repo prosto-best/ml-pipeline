@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements/serve.txt ./requirements/serve.txt
+RUN pip install --no-cache-dir -r requirements/serve.txt
+
+COPY src/ ./src/
+# Артефакты модели кладутся в образ на шаге CI после обучения (см. .github/workflows/ci-cd.yaml)
+COPY artifacts/ ./artifacts/
+
+ENV MODEL_PATH=/app/artifacts/model.joblib \
+    FEATURES_PATH=/app/artifacts/features.json \
+    PYTHONPATH=/app/src
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "serve:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
