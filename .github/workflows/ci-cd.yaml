@@ -57,6 +57,8 @@ jobs:
 
       - name: Train model
         working-directory: src
+        env:
+          ARTIFACTS_DIR: ../artifacts
         run: python train.py --ticker CNYRUB_TOM --start 2018-01-01 --source moex
 
       - name: Quality gate
