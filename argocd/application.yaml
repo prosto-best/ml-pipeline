@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: stock-predictor
+  name: cnyrub-predictor
   namespace: argocd
   finalizers:
     # ресурсы удаляются вместе с Application при её удалении
@@ -10,16 +10,16 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/your-org/stock-price-ml-pipeline.git
+    repoURL: https://github.com/your-org/cnyrub-rate-predictor.git
     targetRevision: main
-    path: helm/stock-predictor
+    path: helm/cnyrub-predictor
     helm:
       valueFiles:
         - values.yaml
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: stock-predictor
+    namespace: cnyrub-predictor
 
   syncPolicy:
     automated:
