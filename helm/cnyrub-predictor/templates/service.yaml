@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "stock-predictor.fullname" . }}
+  name: {{ include "cnyrub-predictor.fullname" . }}
   labels:
-    {{- include "stock-predictor.labels" . | nindent 4 }}
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -12,4 +12,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "stock-predictor.selectorLabels" . | nindent 4 }}
+    {{- include "cnyrub-predictor.selectorLabels" . | nindent 4 }}

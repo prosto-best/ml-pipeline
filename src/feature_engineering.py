@@ -78,8 +78,14 @@ def build_features(
     out["macd_hist"] = macd - signal
     feature_cols += ["macd", "macd_signal", "macd_hist"]
 
-    # Объём: относительное изменение к среднему за 20 дней
-    out["volume_rel_20"] = out["Volume"] / out["Volume"].rolling(20).mean() - 1
+    # Объём (для CNY/RUB это оборот в рублях с MOEX, поле `value`): относительное
+    # изменение к среднему за 20 дней. На валютных парах Volume иногда отсутствует
+    # или равен нулю (например, при использовании резервного источника Yahoo) —
+    # в этом случае признак аккуратно зануляется, а не взрывается в +-inf.
+    volume_ma_20 = out["Volume"].rolling(20).mean()
+    with np.errstate(divide="ignore", invalid="ignore"):
+        volume_rel_20 = out["Volume"] / volume_ma_20 - 1
+    out["volume_rel_20"] = volume_rel_20.replace([np.inf, -np.inf], np.nan).fillna(0.0)
     feature_cols.append("volume_rel_20")
 
     # High-Low spread как доля цены закрытия (прокси внутридневной волатильности)

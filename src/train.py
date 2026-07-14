@@ -1,7 +1,7 @@
-"""Обучение LightGBM-модели предсказания log-return цены акции.
+"""Обучение LightGBM-модели предсказания log-return курса CNY/RUB (юань/рубль).
 
 Использование:
-    python src/train.py --ticker AAPL --start 2015-01-01
+    python src/train.py --ticker CNYRUB_TOM --start 2018-01-01 --source moex
 
 Сохраняет в ARTIFACTS_DIR:
     - model.joblib      обученная модель
@@ -38,7 +38,7 @@ def time_series_split(df, test_size: float):
 
 
 def train(cfg: TrainConfig) -> dict:
-    raw = load_ohlcv(cfg.ticker, cfg.start_date, cfg.end_date)
+    raw = load_ohlcv(cfg.ticker, cfg.start_date, cfg.end_date, source=cfg.source, board=cfg.board)
     featured, feature_cols = build_features(
         raw, cfg.lag_windows, cfg.ma_windows, cfg.rsi_window, cfg.horizon_days
     )
@@ -90,6 +90,8 @@ def train(cfg: TrainConfig) -> dict:
             {
                 "feature_cols": feature_cols,
                 "ticker": cfg.ticker,
+                "source": cfg.source,
+                "board": cfg.board,
                 "horizon_days": cfg.horizon_days,
             },
             f,
@@ -107,6 +109,8 @@ if __name__ == "__main__":
     parser.add_argument("--ticker")
     parser.add_argument("--start")
     parser.add_argument("--end", default="")
+    parser.add_argument("--source", choices=["moex", "yahoo"])
+    parser.add_argument("--board")
     args = parser.parse_args()
 
     cfg = TrainConfig()
@@ -116,6 +120,10 @@ if __name__ == "__main__":
         cfg.start_date = args.start
     if args.end:
         cfg.end_date = args.end
+    if args.source:
+        cfg.source = args.source
+    if args.board:
+        cfg.board = args.board
 
     result = train(cfg)
     print(json.dumps(result, indent=2))
