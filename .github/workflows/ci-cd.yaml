@@ -131,7 +131,7 @@ jobs:
       - name: Bump image tag in values.yaml
         run: |
           sed -i "s/tag: .*/tag: \"${{ needs.build-and-push.outputs.image_tag }}\"/" \
-            helm/cnyrub-predictor/values.yaml
+            helm-chart/cnyrub-predictor/values.yaml
 
       - name: Commit and push
         run: |
