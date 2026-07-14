@@ -14,7 +14,7 @@ class TrainConfig:
     ticker: str = os.getenv("TICKER", "CNYRUB_TOM")
     source: str = os.getenv("DATA_SOURCE", "moex")  # "moex" (рекомендуется) или "yahoo"
     board: str = os.getenv("MOEX_BOARD", "CETS")
-    start_date: str = os.getenv("START_DATE", "2018-01-01")
+    start_date: str = os.getenv("START_DATE", "2024-02-02")
     end_date: str = os.getenv("END_DATE", "")  # пусто = до сегодня
 
     # На сколько торговых дней вперёд предсказываем return
