@@ -10,8 +10,11 @@ from typing import List
 
 @dataclass
 class TrainConfig:
-    ticker: str = os.getenv("TICKER", "AAPL")
-    start_date: str = os.getenv("START_DATE", "2012-01-01")
+    # CNYRUB_TOM -- юань/рубль, расчеты "завтра", основной инструмент на MOEX (борд CETS)
+    ticker: str = os.getenv("TICKER", "CNYRUB_TOM")
+    source: str = os.getenv("DATA_SOURCE", "moex")  # "moex" (рекомендуется) или "yahoo"
+    board: str = os.getenv("MOEX_BOARD", "CETS")
+    start_date: str = os.getenv("START_DATE", "2024-02-02")
     end_date: str = os.getenv("END_DATE", "")  # пусто = до сегодня
 
     # На сколько торговых дней вперёд предсказываем return
@@ -55,5 +58,7 @@ class TrainConfig:
 class ServeConfig:
     model_path: str = os.getenv("MODEL_PATH", "artifacts/model.joblib")
     features_path: str = os.getenv("FEATURES_PATH", "artifacts/features.json")
-    default_ticker: str = os.getenv("TICKER", "AAPL")
+    default_ticker: str = os.getenv("TICKER", "CNYRUB_TOM")
+    default_source: str = os.getenv("DATA_SOURCE", "moex")
+    default_board: str = os.getenv("MOEX_BOARD", "CETS")
     log_level: str = os.getenv("LOG_LEVEL", "info")

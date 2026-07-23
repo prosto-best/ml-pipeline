@@ -1,8 +1,8 @@
-name: CI/CD - Stock Price Predictor
+name: CI/CD - CNY/RUB Rate Predictor
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
     paths:
       - "src/**"
       - "requirements/**"
@@ -10,13 +10,15 @@ on:
       - "Dockerfile.train"
       - "helm/**"
   schedule:
-    # Ежедневное переобучение в 02:00 UTC на свежих данных
+    # Ежедневное переобучение в 02:00 UTC на свежих данных с MOEX.
+    # Валютный рынок MOEX торгует по будням (Пн-Пт), поэтому по выходным
+    # запуск просто не найдёт новых свечей и завершится с тем же результатом.
     - cron: "0 2 * * *"
   workflow_dispatch: {}
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/stock-predictor
+  IMAGE_NAME: ${{ github.repository_owner }}/cnyrub-predictor
 
 jobs:
   test:
@@ -55,7 +57,9 @@ jobs:
 
       - name: Train model
         working-directory: src
-        run: python train.py --ticker AAPL --start 2015-01-01
+        env:
+          ARTIFACTS_DIR: ../artifacts
+        run: python train.py --ticker CNYRUB_TOM --start 2018-01-01 --source moex
 
       - name: Quality gate
         id: gate
@@ -122,18 +126,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: develop
 
       - name: Bump image tag in values.yaml
         run: |
           sed -i "s/tag: .*/tag: \"${{ needs.build-and-push.outputs.image_tag }}\"/" \
-            helm/stock-predictor/values.yaml
+            helm-chart/cnyrub-predictor/values.yaml
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add helm/stock-predictor/values.yaml
+          git add helm-chart/cnyrub-predictor/values.yaml
           git diff --cached --quiet || git commit -m "chore: bump image tag to ${{ needs.build-and-push.outputs.image_tag }} [skip ci]"
           git push
 

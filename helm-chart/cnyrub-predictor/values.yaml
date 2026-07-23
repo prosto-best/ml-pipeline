@@ -1,10 +1,10 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/your-org/stock-predictor
-  # tag обновляется автоматически GitHub Actions после успешного обучения
+  repository: ghcr.io/prosto-best/cnyrub-predictor
+  # тег обновляется автоматически GitHub Actions после успешного обучения
   # и прохождения quality gate (см. .github/workflows/ci-cd.yaml)
-  tag: "latest"
+  tag: "1fec25f6"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -18,10 +18,15 @@ ingress:
   enabled: false
   className: nginx
   annotations: {}
-  host: stock-predictor.example.com
+  host: cnyrub-predictor.62.181.44.191.sslip.io
   tls:
     enabled: false
-    secretName: stock-predictor-tls
+    secretName: cnyrub-predictor-tls
+
+traefik:
+  ingressRoute:
+    enabled: true
+    host: cnyrub-predictor.62.181.44.191.sslip.io
 
 resources:
   requests:
@@ -39,7 +44,9 @@ autoscaling:
 
 # Прокидывается в ConfigMap -> env переменные пода
 config:
-  ticker: "AAPL"
+  ticker: "CNYRUB_TOM"    # secid на MOEX (юань/рубль, расчёты "завтра")
+  dataSource: "moex"       # "moex" (рекомендуется) или "yahoo" как резервный вариант
+  moexBoard: "CETS"
   logLevel: "info"
 
 livenessProbe:
@@ -53,6 +60,7 @@ readinessProbe:
   periodSeconds: 10
 
 podAnnotations: {}
-nodeSelector: {}
+nodeSelector:
+  node-role.kubernetes.io/worker: ""
 tolerations: []
 affinity: {}

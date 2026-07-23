@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "stock-predictor.fullname" . }}-config
-  labels:
-    {{- include "stock-predictor.labels" . | nindent 4 }}
-data:
-  TICKER: {{ .Values.config.ticker | quote }}
-  LOG_LEVEL: {{ .Values.config.logLevel | quote }}

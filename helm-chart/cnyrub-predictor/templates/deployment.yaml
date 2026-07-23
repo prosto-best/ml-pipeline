@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "stock-predictor.fullname" . }}
+  name: {{ include "cnyrub-predictor.fullname" . }}
   labels:
-    {{- include "stock-predictor.labels" . | nindent 4 }}
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "stock-predictor.selectorLabels" . | nindent 6 }}
+      {{- include "cnyrub-predictor.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "stock-predictor.selectorLabels" . | nindent 8 }}
+        {{- include "cnyrub-predictor.selectorLabels" . | nindent 8 }}
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
@@ -25,7 +25,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: {{ include "stock-predictor.name" . }}
+        - name: {{ include "cnyrub-predictor.name" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -34,7 +34,7 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ include "stock-predictor.fullname" . }}-config
+                name: {{ include "cnyrub-predictor.fullname" . }}-config
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbe.path }}
