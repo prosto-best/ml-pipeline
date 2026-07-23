@@ -55,6 +55,7 @@ readinessProbe:
   periodSeconds: 10
 
 podAnnotations: {}
-nodeSelector: {}
+nodeSelector:
+  node-role.kubernetes.io/worker: ""
 tolerations: []
 affinity: {}
