@@ -4,7 +4,7 @@ image:
   repository: ghcr.io/prosto-best/cnyrub-predictor
   # тег обновляется автоматически GitHub Actions после успешного обучения
   # и прохождения quality gate (см. .github/workflows/ci-cd.yaml)
-  tag: "1fec25f6"
+  tag: "424c6a82"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
