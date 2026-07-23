@@ -15,13 +15,18 @@ service:
   targetPort: 8000
 
 ingress:
-  enabled: true
+  enabled: false
   className: nginx
   annotations: {}
-  host: cnyrub-predictor.158.160.219.233.sslip.io
+  host: cnyrub-predictor.62.181.44.191.sslip.io
   tls:
     enabled: false
     secretName: cnyrub-predictor-tls
+
+traefik:
+  ingressRoute:
+    enabled: true
+    host: cnyrub-predictor.62.181.44.191.sslip.io
 
 resources:
   requests:
