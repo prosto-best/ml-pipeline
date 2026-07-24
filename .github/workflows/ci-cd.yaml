@@ -21,6 +21,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/cnyrub-predictor
   MONITOR_IMAGE_NAME: ${{ github.repository_owner }}/cnyrub-monitor
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
 
 jobs:
   test:
@@ -84,7 +86,7 @@ jobs:
           path: artifacts/
 
       - name: Upload local MLflow run data (fallback, if MLFLOW_TRACKING_URI not set)
-        if: ${{ secrets.MLFLOW_TRACKING_URI == '' }}
+        if: ${{ env.MLFLOW_TRACKING_URI == '' }}
         uses: actions/upload-artifact@v4
         with:
           name: mlruns
