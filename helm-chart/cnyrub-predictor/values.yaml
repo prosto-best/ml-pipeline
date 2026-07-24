@@ -1,19 +1,15 @@
 replicaCount: 2
-
 image:
   repository: ghcr.io/prosto-best/cnyrub-predictor
   # тег обновляется автоматически GitHub Actions после успешного обучения
   # и прохождения quality gate (см. .github/workflows/ci-cd.yaml)
-  tag: "1fec25f6"
+  tag: "3095d21f"
   pullPolicy: IfNotPresent
-
 imagePullSecrets: []
-
 service:
   type: ClusterIP
   port: 80
   targetPort: 8000
-
 ingress:
   enabled: false
   className: nginx
@@ -22,12 +18,10 @@ ingress:
   tls:
     enabled: false
     secretName: cnyrub-predictor-tls
-
 traefik:
   ingressRoute:
     enabled: true
     host: cnyrub-predictor.62.181.44.191.sslip.io
-
 resources:
   requests:
     cpu: 250m
@@ -35,32 +29,31 @@ resources:
   limits:
     cpu: 1000m
     memory: 1Gi
-
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 6
   targetCPUUtilizationPercentage: 70
-
 # Прокидывается в ConfigMap -> env переменные пода
 config:
-  ticker: "CNYRUB_TOM"    # secid на MOEX (юань/рубль, расчёты "завтра")
-  dataSource: "moex"       # "moex" (рекомендуется) или "yahoo" как резервный вариант
+  ticker: "CNYRUB_TOM" # secid на MOEX (юань/рубль, расчёты "завтра")
+  dataSource: "moex" # "moex" (рекомендуется) или "yahoo" как резервный вариант
   moexBoard: "CETS"
   logLevel: "info"
-
 livenessProbe:
   path: /health
   initialDelaySeconds: 15
   periodSeconds: 20
-
 readinessProbe:
   path: /health
   initialDelaySeconds: 10
   periodSeconds: 10
-
 podAnnotations: {}
 nodeSelector:
   node-role.kubernetes.io/worker: ""
 tolerations: []
 affinity: {}
+monitoring:
+  cronjob:
+    image:
+      tag: 3095d21f
