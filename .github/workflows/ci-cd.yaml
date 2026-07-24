@@ -205,7 +205,7 @@ jobs:
       - name: Bump image tags in values.yaml
         run: |
           yq -i '.image.tag = "${{ needs.build-and-push.outputs.image_tag }}"' helm-chart/cnyrub-predictor/values.yaml
-          yq -i '.monitoring.cronjob.image.tag = "${{ needs.build-and-push-monitor.outputs.image_tag }}"' helm/cnyrub-predictor/values.yaml
+          yq -i '.monitoring.cronjob.image.tag = "${{ needs.build-and-push-monitor.outputs.image_tag }}"' helm-chart/cnyrub-predictor/values.yaml
 
       - name: Commit and push
         run: |
