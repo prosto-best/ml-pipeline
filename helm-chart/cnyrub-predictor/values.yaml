@@ -27,6 +27,26 @@ traefik:
   ingressRoute:
     enabled: true
     host: cnyrub-predictor.62.181.44.191.sslip.io
+    # websecure -- это HTTPS-entrypoint Traefik (обычно порт 443).
+    # entryPoint "web" -- это голый HTTP (80); для HTTPS нужен websecure.
+    entryPoint: websecure
+    tls:
+      enabled: true
+      secretName: cnyrub-predictor-tls
+      # cert-manager сам выпустит самоподписанный сертификат в этот Secret
+      # (см. templates/certificate.yaml + templates/cluster-issuer.yaml).
+      # Предварительно должен быть установлен cert-manager (см. README --
+      # раздел "HTTPS / TLS в кластере").
+      certManager:
+        enabled: true
+        clusterIssuerName: selfsigned-cluster-issuer
+        installClusterIssuer: true
+    # Автоматический редирект с http://<host> на https://<host> --
+    # без этого голый HTTP-трафик на entrypoint web продолжит работать
+    # в обход TLS.
+    httpRedirect:
+      enabled: true
+
 
 resources:
   requests:
