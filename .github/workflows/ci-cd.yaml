@@ -9,7 +9,7 @@ on:
       - "Dockerfile.serve"
       - "Dockerfile.train"
       - "Dockerfile.monitor"
-      - "helm/**"
+      - "helm-chart/**"
   schedule:
     # Ежедневное переобучение в 02:00 UTC на свежих данных с MOEX.
     # Валютный рынок MOEX торгует по будням (Пн-Пт), поэтому по выходным
@@ -20,6 +20,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/cnyrub-predictor
+  MONITOR_IMAGE_NAME: ${{ github.repository_owner }}/cnyrub-monitor
 
 jobs:
   test:
@@ -83,7 +84,7 @@ jobs:
           path: artifacts/
 
       - name: Upload local MLflow run data (fallback, if MLFLOW_TRACKING_URI not set)
-        if: ${{ !secrets.MLFLOW_TRACKING_URI }}
+        if: ${{ secrets.MLFLOW_TRACKING_URI == '' }}
         uses: actions/upload-artifact@v4
         with:
           name: mlruns
@@ -201,7 +202,7 @@ jobs:
       # monitor), и текстовый sed по общему паттерну задел бы оба сразу.
       - name: Bump image tags in values.yaml
         run: |
-          yq -i '.image.tag = "${{ needs.build-and-push.outputs.image_tag }}"' helm/cnyrub-predictor/values.yaml
+          yq -i '.image.tag = "${{ needs.build-and-push.outputs.image_tag }}"' helm-chart/cnyrub-predictor/values.yaml
           yq -i '.monitoring.cronjob.image.tag = "${{ needs.build-and-push-monitor.outputs.image_tag }}"' helm/cnyrub-predictor/values.yaml
 
       - name: Commit and push
