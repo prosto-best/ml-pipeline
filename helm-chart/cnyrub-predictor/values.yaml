@@ -103,7 +103,7 @@ mlflow:
 
   persistence:
     size: 5Gi
-    storageClassName: ""
+    storageClassName: "local-storage"
 
   resources:
     requests:
