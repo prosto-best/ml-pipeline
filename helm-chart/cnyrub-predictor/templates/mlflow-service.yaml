@@ -1,0 +1,18 @@
+{{- if .Values.mlflow.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cnyrub-predictor.fullname" . }}-mlflow
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mlflow
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.mlflow.port }}
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "cnyrub-predictor.name" . }}-mlflow
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
