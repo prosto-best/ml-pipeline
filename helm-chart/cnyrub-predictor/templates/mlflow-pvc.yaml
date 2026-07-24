@@ -1,18 +1,18 @@
-{{- if .Values.mlflow.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "cnyrub-predictor.fullname" . }}-mlflow
-  labels:
-    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
-    app.kubernetes.io/component: mlflow
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: {{ .Values.mlflow.persistence.size }}
-  {{- if .Values.mlflow.persistence.storageClassName }}
-  storageClassName: {{ .Values.mlflow.persistence.storageClassName }}
-  {{- end }}
-{{- end }}
+# {{- if .Values.mlflow.enabled }}
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: {{ include "cnyrub-predictor.fullname" . }}-mlflow
+#   labels:
+#     {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+#     app.kubernetes.io/component: mlflow
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: {{ .Values.mlflow.persistence.size }}
+#   {{- if .Values.mlflow.persistence.storageClassName }}
+#   storageClassName: {{ .Values.mlflow.persistence.storageClassName }}
+#   {{- end }}
+# {{- end }}
