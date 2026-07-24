@@ -119,9 +119,9 @@ mlflow:
   # поставьте перед ним oauth2-proxy -- иначе эксперименты и модели будет
   # видно всем в интернете.
   ingress:
-    enabled: false
+    enabled: true
     entryPoint: websecure
-    host: mlflow.example.com
+    host: mlflow.62.181.44.191.sslip.io
     tls:
       enabled: true
       secretName: cnyrub-predictor-mlflow-tls
