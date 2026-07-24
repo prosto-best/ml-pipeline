@@ -87,7 +87,7 @@ affinity: {}
 
 
 mlflow:
-  enabled: false
+  enabled: true
   image: ghcr.io/mlflow/mlflow:v2.14.1
   port: 5000
 
