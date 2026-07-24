@@ -1,0 +1,16 @@
+{{- if and .Values.mlflow.enabled .Values.mlflow.ingress.enabled .Values.mlflow.ingress.tls.enabled .Values.mlflow.ingress.tls.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "cnyrub-predictor.fullname" . }}-mlflow
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mlflow
+spec:
+  secretName: {{ .Values.mlflow.ingress.tls.secretName }}
+  dnsNames:
+    - {{ .Values.mlflow.ingress.host }}
+  issuerRef:
+    name: {{ .Values.mlflow.ingress.tls.certManager.clusterIssuerName }}
+    kind: ClusterIssuer
+{{- end }}
