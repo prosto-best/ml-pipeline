@@ -1,0 +1,19 @@
+{{- if .Values.traefik.ingressRoute.tls.certManager.enabled }}
+{{- if .Values.traefik.ingressRoute.tls.certManager.installClusterIssuer }}
+# ClusterIssuer -- ресурс кластерного уровня (не namespaced). Если в кластере
+# уже есть свой self-signed issuer, отключите создание своего через
+# traefik.ingressRoute.tls.certManager.installClusterIssuer=false и укажите
+# имя существующего в clusterIssuerName.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.traefik.ingressRoute.tls.certManager.clusterIssuerName }}
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+spec:
+  # selfSigned -- сертификат подписывается сам собой, без цепочки до
+  # публичного CA. curl/браузер будут показывать "untrusted certificate" --
+  # это ожидаемо, сам канал при этом реально шифруется TLS.
+  selfSigned: {}
+{{- end }}
+{{- end }}

@@ -7,15 +7,51 @@ metadata:
     {{- include "cnyrub-predictor.labels" . | nindent 4 }}
 spec:
   entryPoints:
-    - {{ .Values.traefik.ingressRoute.entryPoint | default "web" }}
+    # Для HTTPS entryPoint должен быть websecure (443), а не web (80) --
+    # иначе TLS-блок ниже просто не применится к трафику.
+    - {{ .Values.traefik.ingressRoute.entryPoint | default "websecure" }}
   routes:
     - match: Host(`{{ .Values.traefik.ingressRoute.host }}`)
       kind: Rule
       services:
         - name: {{ include "cnyrub-predictor.fullname" . }}
-          port: {{ .Values.service.port }} # Убедитесь, что в values.yaml есть секция service.port
-{{- if .Values.traefik.ingressRoute.tls }}
+          port: {{ .Values.service.port }}
+  {{- if .Values.traefik.ingressRoute.tls.enabled }}
   tls:
     secretName: {{ .Values.traefik.ingressRoute.tls.secretName }}
+  {{- end }}
+{{- if and .Values.traefik.ingressRoute.tls.enabled .Values.traefik.ingressRoute.httpRedirect.enabled }}
+---
+# Отдельный IngressRoute на entryPoint web (80), который ничего не отдаёт
+# сам, а только редиректит на https через Middleware -- иначе запросы на
+# голый http://<host> будут по-прежнему обслуживаться в открытую, в обход TLS.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "cnyrub-predictor.fullname" . }}-https-redirect
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "cnyrub-predictor.fullname" . }}-http-redirect
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.traefik.ingressRoute.host }}`)
+      kind: Rule
+      middlewares:
+        - name: {{ include "cnyrub-predictor.fullname" . }}-https-redirect
+      services:
+        - name: {{ include "cnyrub-predictor.fullname" . }}
+          port: {{ .Values.service.port }}
 {{- end }}
 {{- end }}
