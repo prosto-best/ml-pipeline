@@ -68,6 +68,7 @@ jobs:
           # обучение залогируется туда. Если secret не задан -- MLflow тихо
           # пишет всё в локальную ./mlruns, ничего не ломая.
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_INSECURE_TLS: "true"
         run: python train.py --start 2018-01-01 --source moex
 
       - name: Quality gate (+ promote to MLflow Production stage)
@@ -75,6 +76,7 @@ jobs:
         working-directory: src
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_INSECURE_TLS: "true"
         run: |
           python evaluate.py --artifacts-dir ../artifacts
           echo "passed=true" >> "$GITHUB_OUTPUT"
