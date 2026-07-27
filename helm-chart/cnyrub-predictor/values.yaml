@@ -129,7 +129,7 @@ monitoring:
     enabled: true
     schedule: "0 6 * * 1-5"   # по будням в 06:00 UTC, после обновления данных MOEX
     image:
-      repository: ghcr.io/your-org/cnyrub-monitor
+      repository: ghcr.io/prosto-best/cnyrub-monitor
       tag: "latest"
     resources:
       requests:
