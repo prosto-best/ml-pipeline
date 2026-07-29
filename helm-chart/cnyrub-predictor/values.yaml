@@ -1,0 +1,153 @@
+replicaCount: 2
+image:
+  repository: ghcr.io/prosto-best/cnyrub-predictor
+  # тег обновляется автоматически GitHub Actions после успешного обучения
+  # и прохождения quality gate (см. .github/workflows/ci-cd.yaml)
+  tag: "424c6a82"
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  host: cnyrub-predictor.62.181.44.191.sslip.io
+  tls:
+    enabled: false
+    secretName: cnyrub-predictor-tls
+traefik:
+  ingressRoute:
+    enabled: true
+    host: cnyrub-predictor.62.181.44.191.sslip.io
+    # websecure -- это HTTPS-entrypoint Traefik (обычно порт 443).
+    # entryPoint "web" -- это голый HTTP (80); для HTTPS нужен websecure.
+    entryPoint: websecure
+    tls:
+      enabled: true
+      secretName: cnyrub-predictor-tls
+      # cert-manager сам выпустит самоподписанный сертификат в этот Secret
+      # (см. templates/certificate.yaml + templates/cluster-issuer.yaml).
+      # Предварительно должен быть установлен cert-manager (см. README --
+      # раздел "HTTPS / TLS в кластере").
+      certManager:
+        enabled: true
+        clusterIssuerName: selfsigned-cluster-issuer
+        installClusterIssuer: true
+    # Автоматический редирект с http://<host> на https://<host> --
+    # без этого голый HTTP-трафик на entrypoint web продолжит работать
+    # в обход TLS.
+    httpRedirect:
+      enabled: true
+
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+# Прокидывается в ConfigMap -> env переменные пода
+config:
+  ticker: "CNYRUB_TOM,USD000UTSTOM,EUR_RUB__TOM"   # secid на MOEX (юань/рубль, расчёты "завтра")
+  dataSource: "moex"       # "moex" (рекомендуется) или "yahoo" как резервный вариант
+  moexBoard: "CETS"
+  logLevel: "info"
+livenessProbe:
+  path: /health
+  initialDelaySeconds: 15
+  periodSeconds: 20
+readinessProbe:
+  path: /health
+  initialDelaySeconds: 10
+  periodSeconds: 10
+podAnnotations: {}
+nodeSelector:
+  node-role.kubernetes.io/worker: ""
+tolerations: []
+affinity: {}
+
+
+mlflow:
+  enabled: true
+  image: ghcr.io/mlflow/mlflow:v2.14.1
+  port: 5000
+
+  # По умолчанию -- SQLite + локальный PVC (просто, но НЕ для serious prod:
+  # одна реплика, один "писатель", бэкапится только вместе с PVC).
+  # Для прод-нагрузки замените на управляемый Postgres и S3-совместимое
+  # хранилище артефактов, например:
+  #   backendStoreUri: "postgresql://user:pass@postgres-host:5432/mlflow"
+  #   artifactRoot: "s3://my-bucket/mlflow-artifacts"
+  # (и добавьте AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY через Secret, если S3)
+  backendStoreUri: "sqlite:////mlflow/mlflow.db"
+  artifactRoot: "/mlflow/artifacts"
+
+  persistence:
+    size: 5Gi
+    storageClassName: "local-storage"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  # ВАЖНО: у MLflow нет встроенной аутентификации. Если включаете ingress,
+  # чтобы GitHub Actions мог логировать обучение в MLflow снаружи кластера,
+  # обязательно закройте его через Traefik Middleware с basicAuth или
+  # поставьте перед ним oauth2-proxy -- иначе эксперименты и модели будет
+  # видно всем в интернете.
+  ingress:
+    enabled: true
+    entryPoint: websecure
+    host: mlflow.62.181.44.191.sslip.io
+    tls:
+      enabled: true
+      secretName: cnyrub-predictor-mlflow-tls
+      certManager:
+        enabled: true
+        clusterIssuerName: selfsigned-cluster-issuer
+
+# --- Мониторинг качества (см. src/monitor.py) ---
+monitoring:
+  windowDays: 20              # сколько последних реализованных дней брать для "живого" качества
+  maxDegradationRatio: 1.8    # live_rmse / train_rmse выше -- алерт деградации
+  maxDriftShare: 0.5           # доля признаков с дрифтом (Evidently) выше -- алерт дрифта
+
+  cronjob:
+    enabled: true
+    schedule: "0 6 * * 1-5"   # по будням в 06:00 UTC, после обновления данных MOEX
+    image:
+      repository: ghcr.io/prosto-best/cnyrub-monitor
+      tag: "latest"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+  pushgateway:
+    enabled: true
+    image: prom/pushgateway:v1.9.0
+    port: 9091
+
+  # Требует Prometheus Operator (kube-prometheus-stack) в кластере.
+  # additionalLabels обычно нужен, чтобы Prometheus вашего стека вообще
+  # заметил этот ServiceMonitor (см. releaseLabel в values kube-prometheus-stack).
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    additionalLabels: {}

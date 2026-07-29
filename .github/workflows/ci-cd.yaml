@@ -1,22 +1,28 @@
-name: CI/CD - Stock Price Predictor
+name: CI/CD - CNY/RUB Rate Predictor
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
     paths:
       - "src/**"
       - "requirements/**"
       - "Dockerfile.serve"
       - "Dockerfile.train"
-      - "helm/**"
+      - "Dockerfile.monitor"
+      - "helm-chart/**"
   schedule:
-    # Ежедневное переобучение в 02:00 UTC на свежих данных
+    # Ежедневное переобучение в 02:00 UTC на свежих данных с MOEX.
+    # Валютный рынок MOEX торгует по будням (Пн-Пт), поэтому по выходным
+    # запуск просто не найдёт новых свечей и завершится с тем же результатом.
     - cron: "0 2 * * *"
   workflow_dispatch: {}
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/stock-predictor
+  IMAGE_NAME: ${{ github.repository_owner }}/cnyrub-predictor
+  MONITOR_IMAGE_NAME: ${{ github.repository_owner }}/cnyrub-monitor
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
 
 jobs:
   test:
@@ -55,13 +61,24 @@ jobs:
 
       - name: Train model
         working-directory: src
-        run: python train.py --ticker AAPL --start 2015-01-01
+        env:
+          ARTIFACTS_DIR: ../artifacts
+          # Опционально: если в секретах репозитория задан MLFLOW_TRACKING_URI
+          # (адрес MLflow-сервера, поднятого через helm/cnyrub-predictor/templates/mlflow-*),
+          # обучение залогируется туда. Если secret не задан -- MLflow тихо
+          # пишет всё в локальную ./mlruns, ничего не ломая.
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_INSECURE_TLS: "true"
+        run: python train.py --start 2018-01-01 --source moex
 
-      - name: Quality gate
+      - name: Quality gate (+ promote to MLflow Production stage)
         id: gate
         working-directory: src
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_INSECURE_TLS: "true"
         run: |
-          python evaluate.py --metrics-path ../artifacts/metrics.json
+          python evaluate.py --artifacts-dir ../artifacts
           echo "passed=true" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifacts
@@ -69,6 +86,14 @@ jobs:
         with:
           name: model-artifacts
           path: artifacts/
+
+      - name: Upload local MLflow run data (fallback, if MLFLOW_TRACKING_URI not set)
+        if: ${{ env.MLFLOW_TRACKING_URI == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns
+          path: src/mlruns/
+          if-no-files-found: ignore
 
   build-and-push:
     needs: train
@@ -114,8 +139,53 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+
+  build-and-push-monitor:
+    needs: train
+    if: needs.train.outputs.gate_passed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: model-artifacts
+          path: artifacts/
+
+      - name: Set image tag
+        id: meta
+        run: echo "tag=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push monitoring image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.monitor
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.MONITOR_IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.MONITOR_IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   update-helm-values:
-    needs: build-and-push
+    needs: [build-and-push, build-and-push-monitor]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -124,16 +194,26 @@ jobs:
         with:
           ref: main
 
-      - name: Bump image tag in values.yaml
+      - name: Install yq
         run: |
-          sed -i "s/tag: .*/tag: \"${{ needs.build-and-push.outputs.image_tag }}\"/" \
-            helm/stock-predictor/values.yaml
+          if ! command -v yq &> /dev/null; then
+            sudo curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq
+            sudo chmod +x /usr/local/bin/yq
+          fi
+
+      # Используем yq (структурное редактирование YAML), а не sed по строке
+      # "tag: ..." -- в values.yaml теперь ДВА разных image.tag (serving и
+      # monitor), и текстовый sed по общему паттерну задел бы оба сразу.
+      - name: Bump image tags in values.yaml
+        run: |
+          yq -i '.image.tag = "${{ needs.build-and-push.outputs.image_tag }}"' helm-chart/cnyrub-predictor/values.yaml
+          yq -i '.monitoring.cronjob.image.tag = "${{ needs.build-and-push-monitor.outputs.image_tag }}"' helm-chart/cnyrub-predictor/values.yaml
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add helm/stock-predictor/values.yaml
+          git add helm-chart/cnyrub-predictor/values.yaml
           git diff --cached --quiet || git commit -m "chore: bump image tag to ${{ needs.build-and-push.outputs.image_tag }} [skip ci]"
           git push
 

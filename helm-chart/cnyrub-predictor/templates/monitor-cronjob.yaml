@@ -1,0 +1,47 @@
+{{- if .Values.monitoring.cronjob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "cnyrub-predictor.fullname" . }}-monitor
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitor
+spec:
+  schedule: {{ .Values.monitoring.cronjob.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            {{- include "cnyrub-predictor.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: monitor
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: monitor
+              image: "{{ .Values.monitoring.cronjob.image.repository }}:{{ .Values.monitoring.cronjob.image.tag }}"
+              envFrom:
+                - configMapRef:
+                    name: {{ include "cnyrub-predictor.fullname" . }}-config
+              env:
+                {{- if .Values.mlflow.enabled }}
+                - name: MLFLOW_TRACKING_URI
+                  value: "http://{{ include "cnyrub-predictor.fullname" . }}-mlflow:{{ .Values.mlflow.port }}"
+                {{- end }}
+                {{- if .Values.monitoring.pushgateway.enabled }}
+                - name: PUSHGATEWAY_URL
+                  value: "{{ include "cnyrub-predictor.fullname" . }}-pushgateway:{{ .Values.monitoring.pushgateway.port }}"
+                {{- end }}
+                - name: MONITORING_WINDOW_DAYS
+                  value: {{ .Values.monitoring.windowDays | quote }}
+                - name: MAX_DEGRADATION_RATIO
+                  value: {{ .Values.monitoring.maxDegradationRatio | quote }}
+                - name: MAX_DRIFT_SHARE
+                  value: {{ .Values.monitoring.maxDriftShare | quote }}
+              resources:
+                {{- toYaml .Values.monitoring.cronjob.resources | nindent 16 }}
+{{- end }}

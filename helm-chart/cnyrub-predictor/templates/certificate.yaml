@@ -1,0 +1,20 @@
+{{- if .Values.traefik.ingressRoute.tls.certManager.enabled }}
+# ВАЖНО: у cert-manager есть ingress-shim, который сам создаёт Certificate,
+# глядя на аннотации обычного Kubernetes Ingress -- но IngressRoute это CRD
+# Traefik, ingress-shim его не видит. Поэтому Certificate заводим явно, а
+# secretName здесь должен совпадать с traefik.ingressRoute.tls.secretName
+# в IngressRoute (см. templates/ingressroute.yaml).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "cnyrub-predictor.fullname" . }}
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.traefik.ingressRoute.tls.secretName }}
+  dnsNames:
+    - {{ .Values.traefik.ingressRoute.host }}
+  issuerRef:
+    name: {{ .Values.traefik.ingressRoute.tls.certManager.clusterIssuerName }}
+    kind: ClusterIssuer
+{{- end }}

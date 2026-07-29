@@ -1,0 +1,51 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mlflow-basic-auth
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: mlflow
+type: Opaque
+stringData:
+  # Формат строго: имя_пользователя:хеш_пароля
+  users: ""
+---
+apiVersion: traefik.io/v1alpha1
+# Если у вас старая версия Traefik (v2.9 и ниже), используйте: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: mlflow-auth
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: mlflow
+spec:
+  basicAuth:
+    secret: mlflow-basic-auth
+    # Опционально: убрать заголовок авторизации из запросов к бэкенду
+    removeHeader: true 
+---
+{{- if and .Values.mlflow.enabled .Values.mlflow.ingress.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "cnyrub-predictor.fullname" . }}-mlflow
+  labels:
+    {{- include "cnyrub-predictor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mlflow
+spec:
+  entryPoints:
+    - {{ .Values.mlflow.ingress.entryPoint | default "websecure" }}
+  routes:
+    - match: Host(`{{ .Values.mlflow.ingress.host }}`)
+      kind: Rule
+      middlewares:
+      - name: mlflow-auth
+      services:
+        - name: {{ include "cnyrub-predictor.fullname" . }}-mlflow
+          port: {{ .Values.mlflow.port }}
+  {{- if .Values.mlflow.ingress.tls.enabled }}
+  tls:
+    secretName: {{ .Values.mlflow.ingress.tls.secretName }}
+  {{- end }}
+{{- end }}
