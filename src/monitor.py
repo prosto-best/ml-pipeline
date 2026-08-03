@@ -236,7 +236,8 @@ def main(cfg: MonitorConfig, tickers=None) -> int:
     # это уже наблюдение за тем, что УЖЕ в проде, и должно долетать до
     # Prometheus/Grafana как метрика, а не молча падать. Но код возврата
     # всё равно ненулевой при алертах -- удобно смотреть в истории CronJob'а.
-    return 1 if any_alert else 0
+    # return 1 if any_alert else 0
+    return 1 if any_alert and not os.getenv("AIRFLOW_TASK_ID") else 0
 
 
 if __name__ == "__main__":
