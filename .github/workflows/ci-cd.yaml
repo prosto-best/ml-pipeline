@@ -184,7 +184,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  update-helm-values:
+  update-helm-airflow-values:
     needs: [build-and-push, build-and-push-monitor]
     runs-on: ubuntu-latest
     permissions:
@@ -208,12 +208,14 @@ jobs:
         run: |
           yq -i '.image.tag = "${{ needs.build-and-push.outputs.image_tag }}"' helm-chart/cnyrub-predictor/values.yaml
           yq -i '.monitoring.cronjob.image.tag = "${{ needs.build-and-push-monitor.outputs.image_tag }}"' helm-chart/cnyrub-predictor/values.yaml
+          sed -i "s|image=\"ghcr.io/prosto-best/cnyrub-monitor:.*\"|image=\"ghcr.io/prosto-best/cnyrub-monitor:${{ needs.build-and-push-monitor.outputs.image_tag }}\"|g" airflow/airflow-monitor.py
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add helm-chart/cnyrub-predictor/values.yaml
+          git add airflow/
           git diff --cached --quiet || git commit -m "chore: bump image tag to ${{ needs.build-and-push.outputs.image_tag }} [skip ci]"
           git push
 
