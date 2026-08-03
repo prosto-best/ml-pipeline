@@ -11,7 +11,7 @@ with DAG(
 ) as dag:
   airflow_with_kubernetes = KubernetesPodOperator(
     name="kubernetes_operator", 
-    image="ghcr.io/prosto-best/cnyrub-monitor:latest",
+    image="ghcr.io/prosto-best/cnyrub-monitor:0a4b8123",
     task_id="run-pod-with-kubernetes",
 )
 

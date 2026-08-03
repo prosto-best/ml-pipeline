@@ -3,7 +3,7 @@ image:
   repository: ghcr.io/prosto-best/cnyrub-predictor
   # тег обновляется автоматически GitHub Actions после успешного обучения
   # и прохождения quality gate (см. .github/workflows/ci-cd.yaml)
-  tag: "424c6a82"
+  tag: "0a4b8123"
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 service:
@@ -41,8 +41,6 @@ traefik:
     # в обход TLS.
     httpRedirect:
       enabled: true
-
-
 resources:
   requests:
     cpu: 250m
@@ -57,8 +55,8 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 # Прокидывается в ConfigMap -> env переменные пода
 config:
-  ticker: "CNYRUB_TOM,USD000UTSTOM,EUR_RUB__TOM"   # secid на MOEX (юань/рубль, расчёты "завтра")
-  dataSource: "moex"       # "moex" (рекомендуется) или "yahoo" как резервный вариант
+  ticker: "CNYRUB_TOM,USD000UTSTOM,EUR_RUB__TOM" # secid на MOEX (юань/рубль, расчёты "завтра")
+  dataSource: "moex" # "moex" (рекомендуется) или "yahoo" как резервный вариант
   moexBoard: "CETS"
   logLevel: "info"
 livenessProbe:
@@ -74,13 +72,10 @@ nodeSelector:
   node-role.kubernetes.io/worker: ""
 tolerations: []
 affinity: {}
-
-
 mlflow:
   enabled: true
   image: ghcr.io/mlflow/mlflow:v2.14.1
   port: 5000
-
   # По умолчанию -- SQLite + локальный PVC (просто, но НЕ для serious prod:
   # одна реплика, один "писатель", бэкапится только вместе с PVC).
   # Для прод-нагрузки замените на управляемый Postgres и S3-совместимое
@@ -90,11 +85,9 @@ mlflow:
   # (и добавьте AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY через Secret, если S3)
   backendStoreUri: "sqlite:////mlflow/mlflow.db"
   artifactRoot: "/mlflow/artifacts"
-
   persistence:
     size: 5Gi
     storageClassName: "local-storage"
-
   resources:
     requests:
       cpu: 100m
@@ -102,7 +95,6 @@ mlflow:
     limits:
       cpu: 500m
       memory: 1Gi
-
   # ВАЖНО: у MLflow нет встроенной аутентификации. Если включаете ingress,
   # чтобы GitHub Actions мог логировать обучение в MLflow снаружи кластера,
   # обязательно закройте его через Traefik Middleware с basicAuth или
@@ -118,19 +110,17 @@ mlflow:
       certManager:
         enabled: true
         clusterIssuerName: selfsigned-cluster-issuer
-
 # --- Мониторинг качества (см. src/monitor.py) ---
 monitoring:
-  windowDays: 20              # сколько последних реализованных дней брать для "живого" качества
-  maxDegradationRatio: 1.8    # live_rmse / train_rmse выше -- алерт деградации
-  maxDriftShare: 0.5           # доля признаков с дрифтом (Evidently) выше -- алерт дрифта
-
+  windowDays: 20 # сколько последних реализованных дней брать для "живого" качества
+  maxDegradationRatio: 1.8 # live_rmse / train_rmse выше -- алерт деградации
+  maxDriftShare: 0.5 # доля признаков с дрифтом (Evidently) выше -- алерт дрифта
   cronjob:
     enabled: true
-    schedule: "0 6 * * 1-5"   # по будням в 06:00 UTC, после обновления данных MOEX
+    schedule: "0 6 * * 1-5" # по будням в 06:00 UTC, после обновления данных MOEX
     image:
       repository: ghcr.io/prosto-best/cnyrub-monitor
-      tag: "latest"
+      tag: "0a4b8123"
     resources:
       requests:
         cpu: 200m
@@ -138,12 +128,10 @@ monitoring:
       limits:
         cpu: 1000m
         memory: 1Gi
-
   pushgateway:
     enabled: true
     image: prom/pushgateway:v1.9.0
     port: 9091
-
   # Требует Prometheus Operator (kube-prometheus-stack) в кластере.
   # additionalLabels обычно нужен, чтобы Prometheus вашего стека вообще
   # заметил этот ServiceMonitor (см. releaseLabel в values kube-prometheus-stack).
