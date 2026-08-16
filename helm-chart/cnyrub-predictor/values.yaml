@@ -3,7 +3,7 @@ image:
   repository: ghcr.io/prosto-best/cnyrub-predictor
   # тег обновляется автоматически GitHub Actions после успешного обучения
   # и прохождения quality gate (см. .github/workflows/ci-cd.yaml)
-  tag: "bd035905"
+  tag: "74c98fa8"
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 service:
@@ -120,7 +120,7 @@ monitoring:
     schedule: "0 6 * * 1-5" # по будням в 06:00 UTC, после обновления данных MOEX
     image:
       repository: ghcr.io/prosto-best/cnyrub-monitor
-      tag: "bd035905"
+      tag: "74c98fa8"
     resources:
       requests:
         cpu: 200m
